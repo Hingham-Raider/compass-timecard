@@ -583,7 +583,7 @@ function ExportPanel({ timeCards }) {
 }
 
 // ─── TIME CARD ITEM ───────────────────────────────────────────────
-function TimeCardItem({ card, onApprove, onReject }) {
+function TimeCardItem({ card, onApprove, onReject, onDelete }) {
   const hours = calcHours(card.startTime, card.endTime);
   return (
     <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden" style={{ fontFamily: B.font }}>
@@ -639,13 +639,21 @@ function TimeCardItem({ card, onApprove, onReject }) {
             {card.status === "approved" ? "Approved" : "Rejected"} by <strong>{card.approvedBy}</strong> · {formatDateShort(card.approvedAt)}
           </div>
         )}
+        {card.status === "rejected" && onDelete && (
+          <button
+            onClick={() => { if (window.confirm("Delete this rejected time card? This cannot be undone.")) onDelete(card.id); }}
+            className="w-full text-white font-semibold py-2 rounded-xl transition text-sm mt-1"
+            style={{ backgroundColor: "#6b7280", fontFamily: B.font }}>
+            🗑 Delete Card
+          </button>
+        )}
       </div>
     </div>
   );
 }
 
 // ─── MANAGER DASHBOARD ────────────────────────────────────────────
-function ManagerDashboard({ timeCards, managerName, onApprove, onReject, onSignOut }) {
+function ManagerDashboard({ timeCards, managerName, onApprove, onReject, onDelete, onSignOut }) {
   const [tab, setTab]               = useState("cards");
   const [statusFilter, setStatusFilter] = useState("pending");
 
@@ -744,7 +752,7 @@ function ManagerDashboard({ timeCards, managerName, onApprove, onReject, onSignO
                 <p className="text-sm">No time cards to show</p>
               </div>
             ) : filtered.map(card => (
-              <TimeCardItem key={card.id} card={card} onApprove={onApprove} onReject={onReject} />
+              <TimeCardItem key={card.id} card={card} onApprove={onApprove} onReject={onReject} onDelete={onDelete} />
             ))}
           </div>
         </div>
@@ -838,12 +846,17 @@ export default function App() {
     setTimeCards(prev => prev.map(c => c.id === id ? { ...c, status: "rejected", approvedBy: managerName, approvedAt: now } : c));
   };
 
+  const handleDelete = async (id) => {
+    await supabase.from("timecards").delete().eq("id", id);
+    setTimeCards(prev => prev.filter(c => c.id !== id));
+  };
+
   if (view === "home")    return <HomeScreen onSelect={setView} />;
   if (view === "cleaner") return <CleanerScreen onBack={() => setView("home")} onSubmit={handleSubmitCard} />;
   if (view === "manager") return <ManagerLogin  onBack={() => setView("home")} onLogin={(n) => { setManagerName(n); setView("dashboard"); }} />;
   if (view === "dashboard") return (
     <ManagerDashboard timeCards={timeCards} managerName={managerName}
-      onApprove={handleApprove} onReject={handleReject}
+      onApprove={handleApprove} onReject={handleReject} onDelete={handleDelete}
       onSignOut={() => { setManagerName(""); setView("home"); }} />
   );
   return null;
