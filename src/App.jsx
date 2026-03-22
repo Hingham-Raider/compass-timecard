@@ -21,9 +21,9 @@ const B = {
 const MANAGER_PASSWORD = "manager123"; // Replace with Supabase Auth in production
 
 const SHIFTS = [
-  { id: "1", name: "Shift 1", time: "6AM–2PM"   },
-  { id: "2", name: "Shift 2", time: "2PM–10PM"  },
-  { id: "3", name: "Shift 3", time: "10PM–6AM"  },
+  { id: "1", name: "1st Shift", time: "7AM-3PM"   },
+  { id: "2", name: "2nd Shift", time: "3PM-11PM"  },
+  { id: "3", name: "3rd Shift", time: "11PM-7AM"  },
 ];
 
 // Demo data spanning multiple days for export to be meaningful
