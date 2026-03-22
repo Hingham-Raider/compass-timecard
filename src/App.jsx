@@ -18,7 +18,7 @@ const B = {
   font:        "'Nunito Sans', sans-serif",  // Avenir substitute
 };
 
-const MANAGER_PASSWORD = "manager123"; // Replace with Supabase Auth in production
+const MANAGER_PASSWORD = "Clean123"; // Replace with Supabase Auth in production
 
 const SHIFTS = [
   { id: "1", name: "1st Shift", time: "7AM-3PM"   },
