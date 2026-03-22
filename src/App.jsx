@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { supabase } from "./supabase";
 
 // ─── SYSTEM4 BRAND ────────────────────────────────────────────────
 // Colors from official System4 Brand Guidelines (062419)
@@ -758,8 +759,7 @@ function ManagerDashboard({ timeCards, managerName, onApprove, onReject, onSignO
 // ─── ROOT APP ─────────────────────────────────────────────────────
 export default function App() {
   const [view, setView]             = useState("home");
-  const [timeCards, setTimeCards]   = useState(initialCards);
-  const [nextId, setNextId]         = useState(initialCards.length + 1);
+  const [timeCards, setTimeCards]   = useState([]);
   const [managerName, setManagerName] = useState("");
 
   // Inject Nunito Sans (Avenir substitute per System4 brand guidelines)
@@ -774,14 +774,69 @@ export default function App() {
     }
   }, []);
 
-  const handleSubmitCard = (card) => {
-    setTimeCards(prev => [{ ...card, id: nextId }, ...prev]);
-    setNextId(n => n + 1);
+  // Load timecards from Supabase on mount
+  useEffect(() => {
+    const loadCards = async () => {
+      const { data, error } = await supabase
+        .from("timecards")
+        .select("*")
+        .order("created_at", { ascending: false });
+      if (!error && data) {
+        setTimeCards(data.map(r => ({
+          id: r.id,
+          name: r.cleaner_name,
+          shift: r.shift,
+          date: r.date,
+          startTime: r.start_time,
+          endTime: r.end_time,
+          status: r.status || "pending",
+          submittedAt: r.created_at,
+          approvedBy: r.approved_by,
+          approvedAt: r.approved_at,
+        })));
+      }
+    };
+    loadCards();
+
+    // Real-time subscription
+    const channel = supabase.channel("timecards-channel")
+      .on("postgres_changes", { event: "*", schema: "public", table: "timecards" }, () => {
+        loadCards();
+      })
+      .subscribe();
+    return () => supabase.removeChannel(channel);
+  }, []);
+
+  const handleSubmitCard = async (card) => {
+    const { data, error } = await supabase.from("timecards").insert({
+      cleaner_name: card.name,
+      shift: card.shift,
+      date: card.date,
+      start_time: card.startTime,
+      end_time: card.endTime,
+      status: "pending",
+    }).select().single();
+    if (!error && data) {
+      setTimeCards(prev => [{
+        id: data.id, name: data.cleaner_name, shift: data.shift,
+        date: data.date, startTime: data.start_time, endTime: data.end_time,
+        status: data.status, submittedAt: data.created_at,
+        approvedBy: null, approvedAt: null,
+      }, ...prev]);
+    }
   };
-  const handleApprove = (id) =>
-    setTimeCards(prev => prev.map(c => c.id === id ? { ...c, status: "approved", approvedBy: managerName, approvedAt: new Date().toISOString() } : c));
-  const handleReject = (id) =>
-    setTimeCards(prev => prev.map(c => c.id === id ? { ...c, status: "rejected", approvedBy: managerName, approvedAt: new Date().toISOString() } : c));
+
+  const handleApprove = async (id) => {
+    const now = new Date().toISOString();
+    await supabase.from("timecards").update({ status: "approved", approved_by: managerName, approved_at: now }).eq("id", id);
+    setTimeCards(prev => prev.map(c => c.id === id ? { ...c, status: "approved", approvedBy: managerName, approvedAt: now } : c));
+  };
+
+  const handleReject = async (id) => {
+    const now = new Date().toISOString();
+    await supabase.from("timecards").update({ status: "rejected", approved_by: managerName, approved_at: now }).eq("id", id);
+    setTimeCards(prev => prev.map(c => c.id === id ? { ...c, status: "rejected", approvedBy: managerName, approvedAt: now } : c));
+  };
 
   if (view === "home")    return <HomeScreen onSelect={setView} />;
   if (view === "cleaner") return <CleanerScreen onBack={() => setView("home")} onSubmit={handleSubmitCard} />;
