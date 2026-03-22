@@ -437,10 +437,9 @@ function ManagerLogin({ onBack, onLogin }) {
             <div>
               <label className="block text-sm font-semibold text-gray-700 mb-2">Password</label>
               <input type="password" value={password} onChange={e => { setPassword(e.target.value); setError(""); }}
-                placeholder="Enter password" required
+                placeholder="Enter password" required autoComplete="new-password"
                 className={inputCls} style={{ fontFamily: B.font }} />
               {error && <p className="text-red-500 text-sm mt-1.5">{error}</p>}
-              <p className="text-gray-300 text-xs mt-1.5">Demo password: manager123</p>
             </div>
             <PrimaryBtn type="submit">Sign In</PrimaryBtn>
           </form>
