@@ -451,11 +451,27 @@ function ManagerLogin({ onBack, onLogin }) {
 
 // ─── EXPORT PANEL ─────────────────────────────────────────────────
 function ExportPanel({ timeCards }) {
-  const [period, setPeriod]           = useState("week");
+  const [period, setPeriod]             = useState("week");
   const [statusFilter, setStatusFilter] = useState("all");
+  const [customFrom, setCustomFrom]     = useState("");
+  const [customTo, setCustomTo]         = useState("");
 
-  const periodLabel   = getPeriodLabel(period);
-  const periodCards   = getPeriodCards(timeCards, period);
+  const getCustomCards = () => {
+    if (!customFrom && !customTo) return timeCards;
+    return timeCards.filter(c => {
+      if (customFrom && c.date < customFrom) return false;
+      if (customTo   && c.date > customTo)   return false;
+      return true;
+    });
+  };
+
+  const periodLabel = period === "custom"
+    ? (customFrom || customTo
+        ? `${customFrom || "Start"} – ${customTo || "End"}`
+        : "Custom Range")
+    : getPeriodLabel(period);
+
+  const periodCards   = period === "custom" ? getCustomCards() : getPeriodCards(timeCards, period);
   const filteredCards = statusFilter === "all" ? periodCards : periodCards.filter(c => c.status === statusFilter);
   const summary       = getSummary(periodCards);
   const totalHours    = summary.reduce((sum, e) => sum + e.totalHours, 0).toFixed(1);
@@ -463,14 +479,17 @@ function ExportPanel({ timeCards }) {
   const approvedHours = getSummary(approvedCards).reduce((sum, e) => sum + e.totalHours, 0).toFixed(1);
 
   const PERIODS = [
-    { key: "day",   label: "Today"      },
-    { key: "week",  label: "This Week"  },
-    { key: "month", label: "This Month" },
-    { key: "all",   label: "All Time"   },
+    { key: "day",    label: "Today"      },
+    { key: "week",   label: "This Week"  },
+    { key: "month",  label: "This Month" },
+    { key: "all",    label: "All Time"   },
+    { key: "custom", label: "Custom"     },
   ];
 
   const pillActive   = { backgroundColor: B.primary, color: "white", borderColor: B.primary };
   const pillInactive = { backgroundColor: "white", color: "#6b7280", borderColor: "#e5e7eb" };
+
+  const inputCls = "flex-1 border border-gray-200 rounded-xl px-3 py-2 text-sm outline-none";
 
   return (
     <div className="p-4 max-w-2xl mx-auto pb-12" style={{ fontFamily: B.font }}>
@@ -478,7 +497,7 @@ function ExportPanel({ timeCards }) {
       {/* Period selector */}
       <div className="bg-white rounded-xl shadow-sm p-4 mb-4">
         <p className="text-xs font-bold uppercase tracking-widest mb-3" style={{ color: B.red }}>Select Period</p>
-        <div className="grid grid-cols-2 gap-2">
+        <div className="grid grid-cols-3 gap-2">
           {PERIODS.map(p => (
             <button key={p.key} onClick={() => setPeriod(p.key)}
               className="py-3 px-3 rounded-xl border-2 font-semibold text-sm text-center transition-all"
@@ -487,6 +506,30 @@ function ExportPanel({ timeCards }) {
             </button>
           ))}
         </div>
+
+        {/* Custom date range inputs */}
+        {period === "custom" && (
+          <div className="mt-4 space-y-3">
+            <div className="flex items-center gap-2">
+              <label className="text-xs font-semibold text-gray-600 w-10 flex-shrink-0">From</label>
+              <input type="date" value={customFrom} onChange={e => setCustomFrom(e.target.value)}
+                className={inputCls} style={{ fontFamily: B.font }} />
+            </div>
+            <div className="flex items-center gap-2">
+              <label className="text-xs font-semibold text-gray-600 w-10 flex-shrink-0">To</label>
+              <input type="date" value={customTo} onChange={e => setCustomTo(e.target.value)}
+                min={customFrom || undefined}
+                className={inputCls} style={{ fontFamily: B.font }} />
+            </div>
+            {(customFrom || customTo) && (
+              <button onClick={() => { setCustomFrom(""); setCustomTo(""); }}
+                className="text-xs text-gray-400 underline">
+                Clear dates
+              </button>
+            )}
+          </div>
+        )}
+
         <p className="text-xs text-gray-400 text-center mt-3">{periodLabel}</p>
       </div>
 
